@@ -32,13 +32,12 @@ public class WhisperKitExpoModule: Module {
         AsyncFunction("loadTranscriberWithOptions") { (options: ModelOptions) -> Bool in
             initializing = true
             do {
-                pipe = try await WhisperKit(
-                    model: options.model,
-                    downloadBase: options.downloadBase,
-                    modelFolder: options.modelFolder,
-                    download: true,
-                    modelState: options.prewarm ?? true ? .prewarmed : .unloaded
-                )
+                // Load WhisperKit with optional model path
+                if let modelName = options.model {
+                    pipe = try await WhisperKit(modelFolder: modelName)
+                } else {
+                    pipe = try await WhisperKit()
+                }
                 return true
             } catch {
                 print("Failed to load transcriber: \(error)")
@@ -370,11 +369,7 @@ struct WhisperModelUtils {
             ))
             
             // Initialize WhisperKit with the specific model - this triggers download
-            let _ = try await WhisperKit(
-                model: modelVariant,
-                download: true,
-                modelState: .unloaded
-            )
+            let _ = try await WhisperKit(modelFolder: modelVariant)
             
             progressHandler(ModelDownloadProgress(
                 model: modelName,
@@ -557,7 +552,7 @@ struct WordTiming: Record {
     
     init() {}
     
-    init(from word: WhisperKit.Word) {
+    init(from word: Word) {
         self.word = word.word
         self.start = word.start
         self.end = word.end
