@@ -115,15 +115,15 @@ public class WhisperKitExpoModule: Module {
                         TranscriptionSegment(
                             id: index,
                             seek: segment.seek,
-                            start: segment.start,
-                            end: segment.end,
+                            start: Double(segment.start),
+                            end: Double(segment.end),
                             text: segment.text,
                             tokens: segment.tokens,
                             temperature: Double(segment.temperature),
                             avgLogprob: Double(segment.avgLogprob),
                             compressionRatio: Double(segment.compressionRatio),
                             noSpeechProb: Double(segment.noSpeechProb),
-                            words: segment.words?.map { WordTiming(from: $0) }
+                            words: nil // Word-level timing not yet implemented
                         )
                     }
                 }
@@ -551,13 +551,6 @@ struct WordTiming: Record {
     @Field var probability: Double = 0
     
     init() {}
-    
-    init(from word: Word) {
-        self.word = word.word
-        self.start = word.start
-        self.end = word.end
-        self.probability = Double(word.probability)
-    }
     
     func toDictionary() -> [String: Any] {
         return [
