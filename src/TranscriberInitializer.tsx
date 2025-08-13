@@ -1,8 +1,12 @@
 
-import { useEffect } from 'react';
+import { useEffect, ReactNode } from 'react';
 import { loadTranscriber } from '.';
 
-export const TranscriberInitializer = ({ children }) => {
+interface TranscriberInitializerProps {
+  children: ReactNode;
+}
+
+export const TranscriberInitializer = ({ children }: TranscriberInitializerProps) => {
   useEffect(() => {
     console.log("Running the initialization effect for the transcriber");
     loadTranscriber().then((res) => console.log(res ? "success" : "failure"));
