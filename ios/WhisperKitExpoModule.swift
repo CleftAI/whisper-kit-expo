@@ -191,16 +191,20 @@ public class WhisperKitExpoModule: Module {
             
             do {
                 let audioFileURL = URL(fileURLWithPath: path)
-                let audioSamples = try AudioProcessor.loadAudioSamples(from: audioFileURL)
-                let languageProbs = try await whisperKit.detectLanguage(audioSamples: audioSamples)
+                // Use transcribe with detectLanguage option to get language
+                let results = try await whisperKit.transcribe(audioPath: path, decodeOptions: DecodingOptions(detectLanguage: true))
                 
-                // Find the most likely language
-                let detectedLang = languageProbs.max(by: { $0.value < $1.value })?.key ?? "en"
-                
-                return LanguageDetectionResult(
-                    detectedLanguage: detectedLang,
-                    languageProbabilities: languageProbs
-                )
+                if let detectedLang = results.first?.language {
+                    return LanguageDetectionResult(
+                        detectedLanguage: detectedLang,
+                        languageProbabilities: [detectedLang: 1.0]
+                    )
+                } else {
+                    return LanguageDetectionResult(
+                        detectedLanguage: "en",
+                        languageProbabilities: ["en": 1.0]
+                    )
+                }
             } catch {
                 print("Failed to detect language: \(error)")
                 return nil
