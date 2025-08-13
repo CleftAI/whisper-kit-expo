@@ -67,12 +67,14 @@ function App() {
 
 ### Model Selection and Configuration
 
+WhisperKit automatically downloads models from Hugging Face when you first use them. Models are cached locally for subsequent use.
+
 ```typescript
 import { loadTranscriber, ModelConfigurations } from 'whisper-kit-expo';
 
-// Load a specific model
+// Load a specific model (downloads automatically if not present)
 await loadTranscriber({
-  model: 'openai/whisper-small',
+  model: 'openai_whisper-small', // Model variant name
   computeUnits: 'cpuAndNeuralEngine',
   prewarm: true,
   load: true
@@ -80,15 +82,53 @@ await loadTranscriber({
 
 // Or use preset configurations
 await loadTranscriber(ModelConfigurations.distilLarge);
+
+// Custom model repository
+await loadTranscriber({
+  model: 'openai_whisper-base',
+  modelRepo: 'argmaxinc/whisperkit-coreml',
+  downloadBase: 'https://huggingface.co/argmaxinc/whisperkit-coreml/resolve/main/',
+  computeUnits: 'all'
+});
 ```
 
 Available models:
-- `tiny` - 39MB, fastest, English only
-- `base` - 74MB, fast, multilingual
-- `small` - 244MB, balanced
-- `medium` - 769MB, accurate
-- `large-v3` - 1.5GB, most accurate
-- `distil-large-v3` - 756MB, optimized large model
+
+**English-only models** (smaller, faster for English):
+- `tiny.en` (39MB) - Fastest English model
+- `base.en` (74MB) - Good balance for English
+- `small.en` (244MB) - More accurate English
+- `medium.en` (769MB) - High accuracy English
+
+**Multilingual models** (support 99 languages):
+- `tiny` (39MB) - Fastest multilingual
+- `base` (74MB) - Good balance
+- `small` (244MB) - More accurate
+- `medium` (769MB) - High accuracy
+- `large-v2` (1.5GB) - Previous best model
+- `large-v3` (1.5GB) - Latest, most accurate
+- `large-v3-turbo` (954MB) - Optimized large-v3
+
+**Distilled models** (optimized for speed):
+- `distil-large-v3` (756MB) - 2x faster than large-v3
+- `distil-large-v3-turbo` (600MB) - Fastest distilled model
+
+Model variant names (for direct use):
+```
+openai_whisper-tiny.en
+openai_whisper-tiny
+openai_whisper-base.en
+openai_whisper-base
+openai_whisper-small.en
+openai_whisper-small
+openai_whisper-medium.en
+openai_whisper-medium
+openai_whisper-large-v2
+openai_whisper-large-v3
+openai_whisper-large-v3_turbo
+distil-whisper_distil-large-v3
+distil-whisper_distil-large-v3_turbo
+```
 
 ### Transcription with Options and Progress
 
@@ -148,6 +188,8 @@ console.log(finalResult.fullTranscription);
 
 ### Model Management
 
+Models are automatically downloaded when first used with `loadTranscriber()`, but you can also manage them manually:
+
 ```typescript
 import { 
   getAvailableModels, 
@@ -164,17 +206,21 @@ models.forEach(model => {
   console.log(`Downloaded: ${model.isDownloaded}`);
 });
 
-// Download a specific model
+// Pre-download a specific model
 await downloadModel('large-v3', (progress) => {
   console.log(`Downloading: ${progress.progress * 100}%`);
   console.log(`${progress.downloadedBytes} / ${progress.totalBytes}`);
+  console.log(`Status: ${progress.status}`);
 });
 
 // Cancel download
 cancelModelDownload();
 
-// Delete a model
+// Delete a downloaded model to free up space
 await deleteModel('large-v3');
+
+// Models are stored in: 
+// ~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/
 ```
 
 ### Language Detection
@@ -339,9 +385,37 @@ await transcribeWithOptions(file, DecodingPresets.fast);
 await transcribeWithOptions(file, DecodingPresets.streaming);
 ```
 
+## How Model Downloading Works
+
+WhisperKit models are hosted on Hugging Face and downloaded automatically when needed:
+
+1. **First Use**: When you call `loadTranscriber()` with a model, WhisperKit checks if it exists locally
+2. **Auto-Download**: If not present, it downloads from `huggingface.co/argmaxinc/whisperkit-coreml`
+3. **Local Cache**: Models are stored in `~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/`
+4. **Reuse**: Subsequent uses load from the local cache
+
+Example:
+```typescript
+// First time - downloads the model
+await loadTranscriber({ model: 'openai_whisper-base' });
+
+// Second time - loads from cache instantly
+await loadTranscriber({ model: 'openai_whisper-base' });
+
+// Pre-download without loading
+await downloadModel('large-v3', (progress) => {
+  console.log(`Downloading: ${progress.progress * 100}%`);
+});
+```
+
 ## Performance Tips
 
-1. **Model Selection**: Start with smaller models (`tiny`, `base`) and upgrade if needed
+1. **Model Selection**: 
+   - Start with `base` or `small` for good balance
+   - Use `.en` variants if you only need English
+   - Try `turbo` variants for faster processing
+   - `distil-large-v3` offers large model quality at 2x speed
+
 2. **Compute Units**: Use `cpuAndNeuralEngine` for best performance/battery balance
 3. **Streaming**: Disable `wordTimestamps` for lower latency
 4. **Batch Processing**: Process multiple files sequentially, not in parallel

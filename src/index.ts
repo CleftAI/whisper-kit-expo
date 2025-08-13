@@ -175,28 +175,67 @@ export * from './WhisperKitExpo.types';
 
 // Default model configurations
 export const ModelConfigurations = {
+  // Tiny models - fastest, least accurate
+  tinyEn: {
+    model: 'openai_whisper-tiny.en',
+    computeUnits: 'cpuAndNeuralEngine' as const,
+  },
   tiny: {
-    model: 'openai/whisper-tiny',
+    model: 'openai_whisper-tiny',
+    computeUnits: 'cpuAndNeuralEngine' as const,
+  },
+  
+  // Base models - good balance
+  baseEn: {
+    model: 'openai_whisper-base.en',
     computeUnits: 'cpuAndNeuralEngine' as const,
   },
   base: {
-    model: 'openai/whisper-base', 
+    model: 'openai_whisper-base', 
+    computeUnits: 'cpuAndNeuralEngine' as const,
+  },
+  
+  // Small models - more accurate
+  smallEn: {
+    model: 'openai_whisper-small.en',
     computeUnits: 'cpuAndNeuralEngine' as const,
   },
   small: {
-    model: 'openai/whisper-small',
+    model: 'openai_whisper-small',
     computeUnits: 'cpuAndNeuralEngine' as const,
   },
+  
+  // Medium models
+  mediumEn: {
+    model: 'openai_whisper-medium.en',
+    computeUnits: 'all' as const,
+  },
   medium: {
-    model: 'openai/whisper-medium',
+    model: 'openai_whisper-medium',
     computeUnits: 'all' as const,
   },
-  large: {
-    model: 'openai/whisper-large-v3',
+  
+  // Large models - most accurate
+  largeV2: {
+    model: 'openai_whisper-large-v2',
     computeUnits: 'all' as const,
   },
-  distilLarge: {
-    model: 'distil-whisper/distil-large-v3',
+  largeV3: {
+    model: 'openai_whisper-large-v3',
+    computeUnits: 'all' as const,
+  },
+  largeV3Turbo: {
+    model: 'openai_whisper-large-v3_turbo',
+    computeUnits: 'all' as const,
+  },
+  
+  // Distilled models - optimized for speed
+  distilLargeV3: {
+    model: 'distil-whisper_distil-large-v3',
+    computeUnits: 'all' as const,
+  },
+  distilLargeV3Turbo: {
+    model: 'distil-whisper_distil-large-v3_turbo',
     computeUnits: 'all' as const,
   }
 };

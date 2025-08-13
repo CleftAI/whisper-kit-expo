@@ -198,17 +198,18 @@ actor WhisperPipe {
     init(options: ModelOptions) async throws {
         self.modelOptions = options
         
-        let config = WhisperKitConfig(
+        // WhisperKit will automatically download the model if not present
+        self.pipe = try await WhisperKit(
             model: options.model,
             downloadBase: options.downloadBase,
-            modelRepo: options.modelRepo ?? "argmaxinc/WhisperKit",
+            modelRepo: options.modelRepo ?? "argmaxinc/WhisperKit", 
             modelFolder: options.modelFolder,
             computeUnits: options.computeUnits?.toWhisperComputeUnits() ?? .all,
+            verbose: true,
+            logLevel: .debug,
             prewarm: options.prewarm ?? true,
             load: options.load ?? true
         )
-        
-        self.pipe = try await WhisperKit(config: config)
     }
     
     func transcribe(path: String) async throws -> String {
@@ -353,51 +354,118 @@ actor StreamingWhisperPipe {
 // MARK: - Model Management Utilities
 struct WhisperModelUtils {
     static let availableModels: [AvailableModel] = [
+        // Tiny models
+        AvailableModel(
+            name: "tiny.en",
+            repo: "openai_whisper-tiny.en",
+            size: 39_000_000,
+            description: "Smallest model, English only",
+            languages: ["en"],
+            isMultilingual: false
+        ),
         AvailableModel(
             name: "tiny",
-            repo: "openai/whisper-tiny",
+            repo: "openai_whisper-tiny",
             size: 39_000_000,
-            description: "Smallest and fastest model",
+            description: "Smallest multilingual model",
+            languages: WhisperLanguages.supportedLanguages.keys.map { $0 },
+            isMultilingual: true
+        ),
+        
+        // Base models
+        AvailableModel(
+            name: "base.en",
+            repo: "openai_whisper-base.en",
+            size: 74_000_000,
+            description: "Fast English-only model",
             languages: ["en"],
             isMultilingual: false
         ),
         AvailableModel(
             name: "base",
-            repo: "openai/whisper-base",
+            repo: "openai_whisper-base",
             size: 74_000_000,
-            description: "Good balance of speed and accuracy",
+            description: "Fast multilingual model",
             languages: WhisperLanguages.supportedLanguages.keys.map { $0 },
             isMultilingual: true
+        ),
+        
+        // Small models
+        AvailableModel(
+            name: "small.en",
+            repo: "openai_whisper-small.en",
+            size: 244_000_000,
+            description: "Accurate English-only model",
+            languages: ["en"],
+            isMultilingual: false
         ),
         AvailableModel(
             name: "small",
-            repo: "openai/whisper-small",
+            repo: "openai_whisper-small",
             size: 244_000_000,
-            description: "More accurate than base",
+            description: "Accurate multilingual model",
             languages: WhisperLanguages.supportedLanguages.keys.map { $0 },
             isMultilingual: true
         ),
+        
+        // Medium models
+        AvailableModel(
+            name: "medium.en",
+            repo: "openai_whisper-medium.en",
+            size: 769_000_000,
+            description: "High accuracy English-only",
+            languages: ["en"],
+            isMultilingual: false
+        ),
         AvailableModel(
             name: "medium",
-            repo: "openai/whisper-medium",
+            repo: "openai_whisper-medium",
             size: 769_000_000,
-            description: "Good accuracy, slower",
+            description: "High accuracy multilingual",
+            languages: WhisperLanguages.supportedLanguages.keys.map { $0 },
+            isMultilingual: true
+        ),
+        
+        // Large models
+        AvailableModel(
+            name: "large-v2",
+            repo: "openai_whisper-large-v2",
+            size: 1_550_000_000,
+            description: "Previous large model version",
             languages: WhisperLanguages.supportedLanguages.keys.map { $0 },
             isMultilingual: true
         ),
         AvailableModel(
             name: "large-v3",
-            repo: "openai/whisper-large-v3",
+            repo: "openai_whisper-large-v3",
             size: 1_550_000_000,
-            description: "Most accurate, slowest",
+            description: "Latest and most accurate model",
             languages: WhisperLanguages.supportedLanguages.keys.map { $0 },
             isMultilingual: true
         ),
         AvailableModel(
+            name: "large-v3-turbo",
+            repo: "openai_whisper-large-v3_turbo",
+            size: 954_000_000,
+            description: "Optimized large v3 for speed",
+            languages: WhisperLanguages.supportedLanguages.keys.map { $0 },
+            isMultilingual: true
+        ),
+        
+        // Distil models
+        AvailableModel(
             name: "distil-large-v3",
-            repo: "distil-whisper/distil-large-v3",
+            repo: "distil-whisper_distil-large-v3",
             size: 756_000_000,
-            description: "Faster than large-v3, similar accuracy",
+            description: "Distilled large model, faster",
+            languages: WhisperLanguages.supportedLanguages.keys.map { $0 },
+            isMultilingual: true
+        ),
+        AvailableModel(
+            name: "distil-large-v3-turbo",
+            repo: "distil-whisper_distil-large-v3_turbo",
+            size: 600_000_000,
+            description: "Fastest distilled model",
             languages: WhisperLanguages.supportedLanguages.keys.map { $0 },
             isMultilingual: true
         )
@@ -415,24 +483,132 @@ struct WhisperModelUtils {
         modelName: String,
         progressHandler: @escaping (ModelDownloadProgress) -> Void
     ) async throws {
-        // Implementation would use WhisperKit's download functionality
-        // This is a placeholder
-        progressHandler(ModelDownloadProgress(
-            model: modelName,
-            progress: 0.0,
-            downloadedBytes: 0,
-            totalBytes: 0,
-            status: .downloading
-        ))
+        // Determine the model variant to download
+        let modelVariant = getModelVariant(for: modelName)
+        
+        // Create a temporary WhisperKit instance to trigger download
+        // WhisperKit handles downloading automatically when initializing with a model
+        do {
+            progressHandler(ModelDownloadProgress(
+                model: modelName,
+                progress: 0.1,
+                downloadedBytes: 0,
+                totalBytes: getModelSize(modelName),
+                status: "downloading"
+            ))
+            
+            // Initialize WhisperKit with the specific model - this triggers download
+            let _ = try await WhisperKit(
+                model: modelVariant,
+                downloadBase: "https://huggingface.co/argmaxinc/whisperkit-coreml/resolve/main/",
+                modelRepo: "argmaxinc/whisperkit-coreml",
+                modelFolder: getModelFolder(),
+                computeUnits: .cpuAndNeuralEngine,
+                verbose: true,
+                logLevel: .debug,
+                prewarm: false,
+                load: false,
+                download: true
+            )
+            
+            progressHandler(ModelDownloadProgress(
+                model: modelName,
+                progress: 1.0,
+                downloadedBytes: getModelSize(modelName),
+                totalBytes: getModelSize(modelName),
+                status: "completed"
+            ))
+        } catch {
+            progressHandler(ModelDownloadProgress(
+                model: modelName,
+                progress: 0.0,
+                downloadedBytes: 0,
+                totalBytes: 0,
+                status: "failed",
+                error: error.localizedDescription
+            ))
+            throw error
+        }
+    }
+    
+    static func getModelVariant(for name: String) -> String {
+        // First check if the name is already a full model variant
+        if name.contains("_") {
+            return name
+        }
+        
+        // Otherwise map common names to variants
+        switch name {
+        case "tiny.en": return "openai_whisper-tiny.en"
+        case "tiny": return "openai_whisper-tiny"
+        case "base.en": return "openai_whisper-base.en"
+        case "base": return "openai_whisper-base"
+        case "small.en": return "openai_whisper-small.en"
+        case "small": return "openai_whisper-small"
+        case "medium.en": return "openai_whisper-medium.en"
+        case "medium": return "openai_whisper-medium"
+        case "large-v2": return "openai_whisper-large-v2"
+        case "large-v3": return "openai_whisper-large-v3"
+        case "large-v3-turbo": return "openai_whisper-large-v3_turbo"
+        case "distil-large-v3": return "distil-whisper_distil-large-v3"
+        case "distil-large-v3-turbo": return "distil-whisper_distil-large-v3_turbo"
+        default: return "openai_whisper-base"
+        }
+    }
+    
+    static func getModelSize(_ name: String) -> Int64 {
+        switch name {
+        case "tiny.en", "tiny": return 39_000_000
+        case "base.en", "base": return 74_000_000
+        case "small.en", "small": return 244_000_000
+        case "medium.en", "medium": return 769_000_000
+        case "large-v2", "large-v3": return 1_550_000_000
+        case "large-v3-turbo": return 954_000_000
+        case "distil-large-v3": return 756_000_000
+        case "distil-large-v3-turbo": return 600_000_000
+        default: return 74_000_000
+        }
+    }
+    
+    static func getModelFolder() -> String? {
+        // Use the default WhisperKit model folder
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        return documentsPath?.appendingPathComponent("huggingface/models/argmaxinc/whisperkit-coreml").path
     }
     
     static func deleteModel(modelName: String) -> Bool {
-        // Delete model from local storage
-        return true
+        guard let modelFolder = getModelFolder() else { return false }
+        
+        let modelVariant = getModelVariant(for: modelName)
+        let modelPath = (modelFolder as NSString).appendingPathComponent(modelVariant)
+        
+        do {
+            if FileManager.default.fileExists(atPath: modelPath) {
+                try FileManager.default.removeItem(atPath: modelPath)
+                return true
+            }
+            return false
+        } catch {
+            print("Failed to delete model: \(error)")
+            return false
+        }
     }
     
     static func checkIfModelDownloaded(_ modelName: String) -> Bool {
-        // Check if model exists in local storage
+        guard let modelFolder = getModelFolder() else { return false }
+        
+        let modelVariant = getModelVariant(for: modelName)
+        let modelPath = (modelFolder as NSString).appendingPathComponent(modelVariant)
+        
+        // Check if the model directory exists and contains the required files
+        var isDirectory: ObjCBool = false
+        if FileManager.default.fileExists(atPath: modelPath, isDirectory: &isDirectory) {
+            if isDirectory.boolValue {
+                // Check for essential model files
+                let mlmodelcPath = (modelPath as NSString).appendingPathComponent("model.mlmodelc")
+                return FileManager.default.fileExists(atPath: mlmodelcPath)
+            }
+        }
         return false
     }
 }
