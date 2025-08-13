@@ -1,19 +1,16 @@
 # WhisperKit Expo
 
-A comprehensive React Native Expo wrapper for [WhisperKit](https://github.com/argmaxinc/WhisperKit) - Apple's on-device speech recognition framework. This package provides powerful transcription capabilities with support for streaming, multiple models, and advanced configuration options.
+A React Native Expo wrapper for [WhisperKit](https://github.com/argmaxinc/WhisperKit) - Apple's on-device speech recognition framework.
 
 **⚠️ iOS Only**: This package only supports iOS as WhisperKit is an Apple-specific framework.
 
 ## Features
 
 - 🎙️ **File-based transcription** - Transcribe audio files with high accuracy
-- 🔄 **Live streaming transcription** - Real-time transcription during recording
-- 📊 **Progress tracking** - Monitor transcription progress with detailed callbacks
 - 🌍 **Multi-language support** - Detect and transcribe in 30+ languages
-- 📦 **Model management** - Download, select, and manage different Whisper models
-- ⏱️ **Word-level timestamps** - Get precise timing for each word
-- 🎯 **Confidence scores** - Access probability scores for transcriptions
-- ⚡ **Hardware acceleration** - Leverage Apple's Neural Engine for fast processing
+- 📦 **Multiple models** - Choose from tiny to large models based on your needs
+- ⚡ **Hardware acceleration** - Leverages Apple's Neural Engine for fast processing
+- 🔄 **Automatic model downloads** - Models download automatically when first used
 
 ## Installation
 
@@ -35,8 +32,6 @@ After installation, you need to:
 ```
 
 ## Basic Usage
-
-### Simple Transcription
 
 ```typescript
 import { transcribe, loadTranscriber } from 'whisper-kit-expo';
@@ -63,36 +58,21 @@ function App() {
 }
 ```
 
-## Advanced Features
-
-### Model Selection and Configuration
+## Model Selection
 
 WhisperKit automatically downloads models from Hugging Face when you first use them. Models are cached locally for subsequent use.
 
 ```typescript
-import { loadTranscriber, ModelConfigurations } from 'whisper-kit-expo';
+import { loadTranscriber } from 'whisper-kit-expo';
 
 // Load a specific model (downloads automatically if not present)
 await loadTranscriber({
-  model: 'openai_whisper-small', // Model variant name
-  computeUnits: 'cpuAndNeuralEngine',
-  prewarm: true,
-  load: true
-});
-
-// Or use preset configurations
-await loadTranscriber(ModelConfigurations.distilLarge);
-
-// Custom model repository
-await loadTranscriber({
-  model: 'openai_whisper-base',
-  modelRepo: 'argmaxinc/whisperkit-coreml',
-  downloadBase: 'https://huggingface.co/argmaxinc/whisperkit-coreml/resolve/main/',
-  computeUnits: 'all'
+  model: 'openai_whisper-base', // Model variant name
+  prewarm: true
 });
 ```
 
-Available models:
+### Available Models
 
 **English-only models** (smaller, faster for English):
 - `tiny.en` (39MB) - Fastest English model
@@ -102,7 +82,7 @@ Available models:
 
 **Multilingual models** (support 99 languages):
 - `tiny` (39MB) - Fastest multilingual
-- `base` (74MB) - Good balance
+- `base` (74MB) - Good balance (recommended to start)
 - `small` (244MB) - More accurate
 - `medium` (769MB) - High accuracy
 - `large-v2` (1.5GB) - Previous best model
@@ -111,9 +91,10 @@ Available models:
 
 **Distilled models** (optimized for speed):
 - `distil-large-v3` (756MB) - 2x faster than large-v3
-- `distil-large-v3-turbo` (600MB) - Fastest distilled model
 
-Model variant names (for direct use):
+### Model Variant Names
+
+Use these exact names when loading models:
 ```
 openai_whisper-tiny.en
 openai_whisper-tiny
@@ -127,103 +108,25 @@ openai_whisper-large-v2
 openai_whisper-large-v3
 openai_whisper-large-v3_turbo
 distil-whisper_distil-large-v3
-distil-whisper_distil-large-v3_turbo
 ```
 
-### Transcription with Options and Progress
+## Advanced Transcription
 
 ```typescript
-import { transcribeWithOptions, DecodingPresets } from 'whisper-kit-expo';
+import { transcribeWithOptions } from 'whisper-kit-expo';
 
 const result = await transcribeWithOptions('/path/to/audio.m4a', {
-  // Language options
-  language: 'es', // Force Spanish
-  detectLanguage: true, // Or auto-detect
-  
-  // Quality options
-  temperature: 0.0,
-  compressionRatioThreshold: 2.4,
-  logProbThreshold: -1.0,
-  noSpeechThreshold: 0.6,
-  
-  // Features
-  wordTimestamps: true,
+  language: 'es', // Force Spanish, or leave blank for auto-detect
+  wordTimestamps: true, // Get word-level timing
   task: 'transcribe', // or 'translate' to English
-  
-  // Progress callback
-  progressCallback: (progress) => {
-    console.log(`Progress: ${progress.progress * 100}%`);
-    console.log(`Current text: ${progress.text}`);
-  }
 });
 
-console.log(result.text);
-console.log(result.segments); // Detailed segments with timestamps
+console.log(result.text); // Full transcription
 console.log(result.language); // Detected language
+console.log(result.segments); // Detailed segments with timestamps
 ```
 
-### Streaming Transcription
-
-```typescript
-import { startStreaming, stopStreaming } from 'whisper-kit-expo';
-
-// Start streaming with configuration
-await startStreaming(
-  {
-    sampleRate: 16000,
-    numberOfChannels: 1,
-    bufferDuration: 1.0,
-  },
-  (update) => {
-    console.log(`Partial: ${update.isPartial}`);
-    console.log(`Text: ${update.text}`);
-    console.log(`Current time: ${update.currentTime}`);
-  }
-);
-
-// Stop streaming and get final result
-const finalResult = await stopStreaming();
-console.log(finalResult.fullTranscription);
-```
-
-### Model Management
-
-Models are automatically downloaded when first used with `loadTranscriber()`, but you can also manage them manually:
-
-```typescript
-import { 
-  getAvailableModels, 
-  downloadModel, 
-  deleteModel,
-  cancelModelDownload 
-} from 'whisper-kit-expo';
-
-// List available models
-const models = await getAvailableModels();
-models.forEach(model => {
-  console.log(`${model.name}: ${model.description}`);
-  console.log(`Size: ${model.size / 1024 / 1024}MB`);
-  console.log(`Downloaded: ${model.isDownloaded}`);
-});
-
-// Pre-download a specific model
-await downloadModel('large-v3', (progress) => {
-  console.log(`Downloading: ${progress.progress * 100}%`);
-  console.log(`${progress.downloadedBytes} / ${progress.totalBytes}`);
-  console.log(`Status: ${progress.status}`);
-});
-
-// Cancel download
-cancelModelDownload();
-
-// Delete a downloaded model to free up space
-await deleteModel('large-v3');
-
-// Models are stored in: 
-// ~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/
-```
-
-### Language Detection
+## Language Detection
 
 ```typescript
 import { detectLanguage, getSupportedLanguages } from 'whisper-kit-expo';
@@ -238,19 +141,23 @@ const languages = getSupportedLanguages();
 // { "en": "English", "es": "Spanish", "fr": "French", ... }
 ```
 
-### Word-Level Timestamps
+## Model Management
 
 ```typescript
-const result = await transcribeWithOptions('/path/to/audio.m4a', {
-  wordTimestamps: true
+import { getAvailableModels, downloadModel, deleteModel } from 'whisper-kit-expo';
+
+// List available models
+const models = await getAvailableModels();
+models.forEach(model => {
+  console.log(`${model.name}: ${model.description}`);
+  console.log(`Downloaded: ${model.isDownloaded}`);
 });
 
-result.segments.forEach(segment => {
-  console.log(`Segment: ${segment.text}`);
-  segment.words?.forEach(word => {
-    console.log(`  "${word.word}" at ${word.start}s - ${word.end}s`);
-  });
-});
+// Pre-download a model
+await downloadModel('large-v3');
+
+// Delete a model to free up space
+await deleteModel('large-v3');
 ```
 
 ## API Reference
@@ -261,35 +168,10 @@ result.segments.forEach(segment => {
 Initialize the transcriber with optional model configuration.
 
 #### `transcribe(file: string): Promise<string>`
-Simple transcription function (backward compatible).
+Simple transcription function that returns the transcribed text.
 
 #### `transcribeWithOptions(file: string, options?: TranscriptionOptions): Promise<TranscriptionResult>`
-Advanced transcription with full options and callbacks.
-
-### Streaming Functions
-
-#### `startStreaming(config?: AudioStreamConfig, onUpdate?: StreamingListener): Promise<boolean>`
-Start live transcription from microphone.
-
-#### `stopStreaming(): Promise<StreamingResult | null>`
-Stop streaming and get the final transcription.
-
-#### `feedAudioData(audioData: ArrayBuffer): Promise<void>`
-Feed audio data manually for streaming transcription.
-
-### Model Management
-
-#### `getAvailableModels(): Promise<AvailableModel[]>`
-Get list of available Whisper models.
-
-#### `downloadModel(modelName: string, onProgress?: DownloadListener): Promise<boolean>`
-Download a specific model with progress tracking.
-
-#### `deleteModel(modelName: string): Promise<boolean>`
-Delete a downloaded model.
-
-#### `cancelModelDownload(): void`
-Cancel ongoing model download.
+Advanced transcription with options for language, timestamps, and more.
 
 ### Language Functions
 
@@ -299,140 +181,70 @@ Detect the language of an audio file.
 #### `getSupportedLanguages(): Record<string, string>`
 Get all supported languages as ISO codes with names.
 
+### Model Management
+
+#### `getAvailableModels(): Promise<AvailableModel[]>`
+Get list of available Whisper models.
+
+#### `downloadModel(modelName: string): Promise<boolean>`
+Pre-download a specific model.
+
+#### `deleteModel(modelName: string): Promise<boolean>`
+Delete a downloaded model.
+
 ### Utility Functions
 
 #### `isTranscriberReady(): boolean`
 Check if the transcriber is initialized and ready.
-
-#### `cleanup(): void`
-Remove all event listeners (call on unmount).
 
 ## Types
 
 ### ModelOptions
 ```typescript
 type ModelOptions = {
-  model?: string;
+  model?: string; // Model variant name
   downloadBase?: string;
   modelFolder?: string;
-  modelRepo?: string;
-  computeUnits?: 'cpuOnly' | 'cpuAndGPU' | 'cpuAndNeuralEngine' | 'all';
   prewarm?: boolean;
-  load?: boolean;
 };
 ```
 
 ### TranscriptionOptions
 ```typescript
 type TranscriptionOptions = {
-  // Task
   task?: 'transcribe' | 'translate';
-  
-  // Language
-  language?: string;
-  detectLanguage?: boolean;
-  
-  // Quality
+  language?: string; // ISO 639-1 code
   temperature?: number;
-  compressionRatioThreshold?: number;
-  logProbThreshold?: number;
-  noSpeechThreshold?: number;
-  
-  // Features
   wordTimestamps?: boolean;
-  withoutTimestamps?: boolean;
-  
-  // Callbacks
-  progressCallback?: (progress: TranscriptionProgress) => void;
-  streamingCallback?: (update: StreamingTranscriptionUpdate) => void;
-  
-  // Performance
-  concurrentWorkerCount?: number;
-  chunkingStrategy?: 'vad' | 'fixed';
+  // ... more options
 };
 ```
 
-### TranscriptionSegment
+### TranscriptionResult
 ```typescript
-type TranscriptionSegment = {
-  id: number;
-  start: number;
-  end: number;
+type TranscriptionResult = {
   text: string;
-  tokens: number[];
-  temperature: number;
-  avgLogprob: number;
-  compressionRatio: number;
-  noSpeechProb: number;
-  words?: WordTiming[];
+  segments: TranscriptionSegment[];
+  language?: string;
 };
 ```
 
-## Presets
-
-The package includes convenient presets for common use cases:
-
-```typescript
-import { DecodingPresets } from 'whisper-kit-expo';
-
-// For highest accuracy
-await transcribeWithOptions(file, DecodingPresets.accurate);
-
-// For fastest processing
-await transcribeWithOptions(file, DecodingPresets.fast);
-
-// For streaming
-await transcribeWithOptions(file, DecodingPresets.streaming);
-```
-
-## How Model Downloading Works
-
-WhisperKit models are hosted on Hugging Face and downloaded automatically when needed:
+## How Models Work
 
 1. **First Use**: When you call `loadTranscriber()` with a model, WhisperKit checks if it exists locally
-2. **Auto-Download**: If not present, it downloads from `huggingface.co/argmaxinc/whisperkit-coreml`
-3. **Local Cache**: Models are stored in `~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/`
-4. **Reuse**: Subsequent uses load from the local cache
-
-Example:
-```typescript
-// First time - downloads the model
-await loadTranscriber({ model: 'openai_whisper-base' });
-
-// Second time - loads from cache instantly
-await loadTranscriber({ model: 'openai_whisper-base' });
-
-// Pre-download without loading
-await downloadModel('large-v3', (progress) => {
-  console.log(`Downloading: ${progress.progress * 100}%`);
-});
-```
+2. **Auto-Download**: If not present, it downloads from Hugging Face
+3. **Local Cache**: Models are stored in `~/Documents/huggingface/models/`
+4. **Reuse**: Subsequent uses load from cache instantly
 
 ## Performance Tips
 
 1. **Model Selection**: 
-   - Start with `base` or `small` for good balance
+   - Start with `base` for good balance
    - Use `.en` variants if you only need English
-   - Try `turbo` variants for faster processing
    - `distil-large-v3` offers large model quality at 2x speed
 
-2. **Compute Units**: Use `cpuAndNeuralEngine` for best performance/battery balance
-3. **Streaming**: Disable `wordTimestamps` for lower latency
-4. **Batch Processing**: Process multiple files sequentially, not in parallel
-
-## Error Handling
-
-```typescript
-try {
-  const text = await transcribe(file);
-} catch (error) {
-  if (error.message.includes('loadTranscriber')) {
-    // Model not loaded
-  } else if (error.message.includes('audio format')) {
-    // Unsupported audio format
-  }
-}
-```
+2. **Memory Usage**: Larger models require more memory
+3. **First Run**: Initial model download may take time depending on size
 
 ## Supported Audio Formats
 
@@ -447,6 +259,17 @@ try {
 - iOS 17.0+
 - Expo SDK 53+
 - React Native 0.76.6+
+
+## Troubleshooting
+
+### Model Download Issues
+If models fail to download, check your internet connection and available storage space.
+
+### Memory Warnings
+For large models on older devices, you may need to use smaller models or close other apps.
+
+### Audio Format Errors
+Ensure your audio files are in a supported format and accessible at the provided path.
 
 ## License
 

@@ -80,7 +80,11 @@ export async function transcribeWithOptions(
 
 // Model loading with options
 export async function loadTranscriber(options?: ModelOptions): Promise<boolean> {
-  return await WhisperKitExpoModule.loadTranscriber(options);
+  if (options) {
+    return await WhisperKitExpoModule.loadTranscriberWithOptions(options);
+  } else {
+    return await WhisperKitExpoModule.loadTranscriber();
+  }
 }
 
 // Streaming transcription functions
