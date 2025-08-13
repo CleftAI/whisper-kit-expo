@@ -91,18 +91,18 @@ public class WhisperKitExpoModule: Module {
                 let decodingOptions = options?.toDecodingOptions() ?? DecodingOptions()
                 
                 // Set up progress callback if needed
-                var progressCallback: ((TranscriptionProgress) -> Void)? = nil
-                if options?.progressCallback != nil {
-                    progressCallback = { progress in
-                        self.sendEvent("onTranscriptionProgress", [
-                            "progress": progress.progress,
-                            "currentTime": progress.currentTime,
-                            "totalTime": progress.totalTime,
-                            "text": progress.text,
-                            "segments": progress.segments.map { $0.toDictionary() }
-                        ])
-                    }
-                }
+                let progressCallback: ((TranscriptionProgress) -> Bool?)? = options?.progressCallback == true ? { progress in
+                    // Send progress update to JavaScript
+                    self.sendEvent("onTranscriptionProgress", [
+                        "text": progress.text,
+                        "tokens": progress.tokens,
+                        "avgLogprob": progress.avgLogprob,
+                        "compressionRatio": progress.compressionRatio
+                    ])
+                    
+                    // Continue transcription (return nil for default behavior, false to stop)
+                    return nil
+                } : nil
                 
                 let results = try await whisperKit.transcribe(
                     audioPath: path,
@@ -574,13 +574,7 @@ struct WordTiming: Record {
     }
 }
 
-struct TranscriptionProgress: Record {
-    @Field var progress: Double = 0
-    @Field var currentTime: Double = 0
-    @Field var totalTime: Double = 0
-    @Field var text: String = ""
-    @Field var segments: [TranscriptionSegment] = []
-}
+// Note: TranscriptionProgress is a WhisperKit type, not our own Record type
 
 struct StreamingResult: Record {
     @Field var success: Bool = true

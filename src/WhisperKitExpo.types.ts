@@ -25,11 +25,10 @@ export type WordTiming = {
 };
 
 export type TranscriptionProgress = {
-  progress: number; // 0.0 to 1.0
-  currentTime: number;
-  totalTime: number;
   text: string;
-  segments: TranscriptionSegment[];
+  tokens: number[];
+  avgLogprob: number;
+  compressionRatio: number;
 };
 
 export type StreamingTranscriptionUpdate = {

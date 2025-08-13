@@ -119,6 +119,14 @@ const result = await transcribeWithOptions('/path/to/audio.m4a', {
   language: 'es', // Force Spanish, or leave blank for auto-detect
   wordTimestamps: true, // Get word-level timing
   task: 'transcribe', // or 'translate' to English
+  
+  // Real-time progress updates
+  progressCallback: (progress) => {
+    console.log('Current text:', progress.text);
+    console.log('Tokens:', progress.tokens.length);
+    console.log('Avg log probability:', progress.avgLogprob);
+    console.log('Compression ratio:', progress.compressionRatio);
+  }
 });
 
 console.log(result.text); // Full transcription
