@@ -3,7 +3,6 @@
 import { 
   TranscribeResult,
   TranscriptionSegment,
-  WordTiming,
   TranscriptionProgress,
   StreamingTranscriptionUpdate,
   DecodingOptions,
@@ -165,7 +164,9 @@ export function isTranscriberReady(): boolean {
 // Clean up all event listeners
 export function cleanup(): void {
   if (eventEmitter) {
-    eventEmitter.removeAllListeners();
+    eventEmitter.removeAllListeners('onTranscriptionProgress');
+    eventEmitter.removeAllListeners('onStreamingUpdate');
+    eventEmitter.removeAllListeners('onModelDownloadProgress');
   }
 }
 
